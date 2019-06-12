@@ -1,0 +1,65 @@
+--- Acse.y	2019-01-13 19:17:20.773112000 +0100
++++ Original.y	2017-12-12 12:04:19.000000000 +0100
+@@ -108,7 +108,6 @@
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
+-   t_map map;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -125,7 +124,6 @@
+ %token RETURN
+ %token READ
+ %token WRITE
+-%token ON
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -134,8 +132,6 @@
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
+-%token <map> MAP
+-%token <intval> AS
+ 
+ %type <expr> exp
+ %type <decl> declaration
+@@ -250,7 +246,6 @@
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
+-	    | map_statement SEMI
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+@@ -462,29 +457,6 @@
+             }
+ ;
+ 
+-map_statement: MAP IDENTIFIER ON IDENTIFIER AS{
+-		  if(getVariable(program,$2)->isArray || !getVariable(program,$4)->isArray)notifyError(AXE_INVALID_TYPE);
+-		   $5=gen_load_immediate(program,0); // questo è il valore del registro ove è contenuto 0
+-		   $1.label_cond=newLabel(program);
+-		   $1.label_end=newLabel(program);
+-		   $1.reg_elem=get_symbol_location(program,$2,0);
+-		   assignLabel(program,$1.label_cond);
+-		   gen_subi_instruction(program,getNewRegister(program),$5,getVariable(program,$4)->arraySize);
+-		   gen_beq_instruction(program,$1.label_end,0);
+-		
+-		   int i=loadArrayElement(program,$4,create_expression($5,REGISTER));
+-		   gen_add_instruction(program,$1.reg_elem,REG_0,i,CG_DIRECT_ALL);
+-  
+-	       }code_block{
+-			storeArrayElement(program,$4,create_expression($5,REGISTER),create_expression($1.reg_elem,REGISTER));
+-			gen_addi_instruction(program,$5,$5,1);
+-			gen_bt_instruction(program,$1.label_cond,0);
+-			assignLabel(program,$1.label_end);
+-			free($2);
+-			free($4);
+-		}
+-;
+-
+ exp: NUMBER      { $$ = create_expression ($1, IMMEDIATE); }
+    | IDENTIFIER  {
+                      int location;

@@ -1,0 +1,4 @@
+int v=11584;
+int a;
+a=brange(v,2,12);
+write(a);

@@ -1,0 +1,104 @@
+--- Acse.y	2018-12-21 10:31:58.570834872 +0100
++++ Original.y	2017-12-12 12:04:19.000000000 +0100
+@@ -36,7 +36,7 @@
+ #  include "axe_debug.h"
+ #endif
+ 
+-/* QUESTA VERSIONE IMPLEMENTATA DA ME NON FUNZIONA CON CONTINUE INNESTATI:: VEDI LA SOLUZIONE IN CUI è IMPLEMENTATA CON UNO STACK PER FAR SI CHE VENGA IMPLEMENTATA CORRETTAMENTE */
++
+ 
+ /* global variables */
+ int line_num;        /* this variable will keep track of the
+@@ -93,13 +93,6 @@
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
+-typedef struct t_do_continue{
+- t_axe_label *label_init;
+- t_axe_label *label_cond;
+-}t_do_continue;
+-
+-t_axe_label *continued=NULL;
+-
+ %}
+ %expect 1
+ 
+@@ -115,7 +108,6 @@
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
+-   t_do_continue do_continue;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -132,9 +124,8 @@
+ %token RETURN
+ %token READ
+ %token WRITE
+-%token CONTINUE
+ 
+-%token <do_continue> DO
++%token <label> DO
+ %token <while_stmt> WHILE
+ %token <label> IF
+ %token <label> ELSE
+@@ -256,13 +247,6 @@
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
+-	    | continue_statement SEMI {}
+-;
+-
+-continue_statement: CONTINUE {
+-			if(continued==NULL) notifyError(AXE_INVALID_INSTRUCTION);
+-			else gen_bt_instruction(program,continued,0);
+-		}
+ ;
+ 
+ control_statement : if_statement         { /* does nothing */ }
+@@ -377,7 +361,6 @@
+                      /* reserve and fix a new label */
+                      $1.label_condition
+                            = assignNewLabel(program);
+-		     continued=$1.label_condition;
+                   }
+                   LPAR exp RPAR
+                   {
+@@ -403,7 +386,6 @@
+ 
+                      /* fix the label `label_end' */
+                      assignLabel(program, $1.label_end);
+-		     continued=NULL;
+                   }
+ ;
+                   
+@@ -411,17 +393,13 @@
+                      {
+                         /* the label that points to the address where to jump if
+                          * `exp' is not verified */
+-                        $1.label_init = newLabel(program);
++                        $1 = newLabel(program);
+                         
+                         /* fix the label */
+-                        assignLabel(program, $1.label_init);
+-			$1.label_cond=newLabel(program);
+-			continued=$1.label_cond;
+-			
++                        assignLabel(program, $1);
+                      }
+                      code_block WHILE LPAR exp RPAR
+                      {
+-			   assignLabel(program,$1.label_cond);
+                            if ($6.expression_type == IMMEDIATE)
+                                gen_load_immediate(program, $6.value);
+                            else
+@@ -429,8 +407,7 @@
+                                    $6.value, $6.value, CG_DIRECT_ALL);
+ 
+                            /* if `exp' returns TRUE, jump to the label $1 */
+-                           gen_bne_instruction (program, $1.label_init, 0);
+-			   continued=NULL;
++                           gen_bne_instruction (program, $1, 0);
+                      }
+ ;
+ 

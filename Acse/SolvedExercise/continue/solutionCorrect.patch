@@ -1,0 +1,105 @@
+diff -ruN acse_1.1.0/acse/Acse.lex acse_1.1.0-continue//acse/Acse.lex
+--- acse_1.1.0/acse/Acse.lex	2008-11-21 12:47:02.000000000 +0100
++++ acse_1.1.0-continue//acse/Acse.lex	2012-07-04 11:11:11.986705046 +0200
+@@ -98,6 +98,7 @@
+ "return"          { return RETURN; }
+ "read"            { return READ; }
+ "write"           { return WRITE; }
++"continue"        { return CONTINUE; }
+ 
+ {ID}              { yylval.svalue=strdup(yytext); return IDENTIFIER; }
+ {DIGIT}+          { yylval.intval = atoi( yytext );
+diff -ruN acse_1.1.0/acse/Acse.y acse_1.1.0-continue//acse/Acse.y
+--- acse_1.1.0/acse/Acse.y	2008-12-23 17:02:28.000000000 +0100
++++ acse_1.1.0-continue//acse/Acse.y	2012-07-04 11:47:50.778810199 +0200
+@@ -90,6 +90,9 @@
+ 
+ t_io_infos *file_infos;    /* input and output files used by the compiler */
+ 
++
++t_list *loop_nest = NULL;
++
+ %}
+ 
+ %expect 1
+@@ -122,6 +125,7 @@
+ %token RETURN
+ %token READ
+ %token WRITE
++%token CONTINUE
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -244,6 +248,7 @@
+ statement   : assign_statement SEMI      { /* does nothing */ }
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
++            | continue_statement         { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
+ ;
+ 
+@@ -257,6 +262,17 @@
+                      | write_statement { /* does nothing */ }
+ ;
+ 
++continue_statement : CONTINUE 
++            {
++                if (loop_nest == NULL) {
++                    printMessage("This continue statement is outside cycles!\n");
++                    exit(-1);
++                }
++                
++                t_axe_label *next_iter = loop_nest->data;
++                gen_bt_instruction(program, next_iter, 0);
++            }
++
+ assign_statement : IDENTIFIER LSQUARE exp RSQUARE ASSIGN exp
+             {
+                /* Notify to `program' that the value $6
+@@ -374,9 +390,13 @@
+ 
+                      /* if `exp' returns FALSE, jump to the label $1.label_end */
+                      gen_beq_instruction (program, $1.label_end, 0);
++                     
++                     loop_nest = addFirst(loop_nest, $1.label_condition);
+                   }
+                   code_block
+                   {
++                     loop_nest = removeFirst(loop_nest);
++                     
+                      /* jump to the beginning of the loop */
+                      gen_bt_instruction
+                            (program, $1.label_condition, 0);
+@@ -394,14 +414,26 @@
+                         
+                         /* fix the label */
+                         assignLabel(program, $1);
++                        
++                        /* Push the condition label */
++                        t_axe_label *condition = newLabel(program);
++                        loop_nest = addFirst(loop_nest, condition);
++                     }
++                     code_block 
++                     {
++                         t_axe_label *condition = loop_nest->data;
++                         assignLabel(program, condition);
++                         
++                         loop_nest = removeFirst(loop_nest);
++                     
+                      }
+-                     code_block WHILE LPAR exp RPAR
++                     WHILE LPAR exp RPAR
+                      {
+-                           if ($6.expression_type == IMMEDIATE)
+-                               gen_load_immediate(program, $6.value);
++                           if ($7.expression_type == IMMEDIATE)
++                               gen_load_immediate(program, $7.value);
+                            else
+-                               gen_andb_instruction(program, $6.value,
+-                                   $6.value, $6.value, CG_DIRECT_ALL);
++                               gen_andb_instruction(program, $7.value,
++                                   $7.value, $7.value, CG_DIRECT_ALL);
+ 
+                            /* if `exp' returns TRUE, jump to the label $1 */
+                            gen_bne_instruction (program, $1, 0);
+

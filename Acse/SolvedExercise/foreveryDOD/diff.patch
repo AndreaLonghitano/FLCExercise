@@ -1,0 +1,106 @@
+--- Acse.y	2019-01-12 21:54:49.654898886 +0100
++++ Original.y	2017-12-12 12:04:19.000000000 +0100
+@@ -93,17 +93,6 @@
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
+-
+-typedef struct t_forevery{
+-  t_axe_label *label_exec;
+-  t_axe_label *label_increase;
+-  t_axe_label *label_do;
+-  t_axe_label *label_every;
+-  t_axe_label *label_end;
+-  int reg_iteration;
+-  int size;
+-}t_forevery;
+-
+ %}
+ %expect 1
+ 
+@@ -119,7 +108,6 @@
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
+-   t_forevery forevery;
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -144,10 +132,6 @@
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
+-%token <forevery> FOREACH
+-%token DOD
+-%token IN
+-%token EVERY
+ 
+ %type <expr> exp
+ %type <decl> declaration
+@@ -269,66 +253,6 @@
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
+-	    | foreach_statement SEMI     {  }
+-;
+-
+-foreach_statement: FOREACH IDENTIFIER IN IDENTIFIER {
+-
+-		   if(getVariable(program,$2)->isArray || !getVariable(program,$4)->isArray) notifyError(AXE_INVALID_TYPE);
+-
+-			$1.size=getVariable(program,$4)->arraySize;
+-
+-			$1.reg_iteration=getNewRegister(program);
+-			gen_addi_instruction(program,$1.reg_iteration,REG_0,0);
+-
+-			int reg_id=get_symbol_location(program,$2,0);
+-
+-			int reg_counter=getNewRegister(program);
+-			gen_addi_instruction(program,reg_counter,REG_0,0); // nel counter inzialmente vado a mettere 0
+-			int reg_ele=loadArrayElement(program,$4,create_expression(reg_counter,REGISTER));
+-
+-			gen_add_instruction(program,reg_id,REG_0,reg_ele,CG_DIRECT_ALL);
+-			$1.label_exec=newLabel(program);
+-			gen_bt_instruction(program,$1.label_exec,0);  // la prima iterazione la eseguo sempre non c'è bisogno di controlalre
+-
+-			$1.label_increase=newLabel(program);
+-			assignLabel(program,$1.label_increase);
+-			gen_addi_instruction(program,reg_counter,reg_counter,1);
+-			gen_subi_instruction(program,getNewRegister(program),reg_counter,getVariable(program,$4)->arraySize);
+-			
+-			$1.label_end=newLabel(program);
+-			gen_beq_instruction(program,$1.label_end,0);
+-
+-			// se sono qui vuol dire che ancora è tutto ok 
+-			
+-			reg_ele=loadArrayElement(program,$4,create_expression(reg_counter,REGISTER));
+-			gen_add_instruction(program,reg_id,REG_0,reg_ele,CG_DIRECT_ALL);
+-			
+-
+-			assignLabel(program,$1.label_exec);
+-
+-		}code_block{
+-			
+-		} EVERY NUMBER DOD {
+-		   if ($9<0) notifyError(AXE_INVALID_INSTRUCTION);
+-		      if($9>$1.size)notifyError(AXE_INVALID_INSTRUCTION); // se la dimensione dell'array è maggiore vado
+-
+-		      gen_addi_instruction(program,$1.reg_iteration,$1.reg_iteration,1);  // questo registro tiene conto a quale iterazione siamo arrivati
+-		      gen_subi_instruction(program,getNewRegister(program),$1.reg_iteration,$9);  
+-
+-		      $1.label_every=newLabel(program);
+-		      gen_beq_instruction(program,$1.label_every,0);
+-		      gen_bt_instruction(program,$1.label_increase,0);
+-
+-		      assignLabel(program,$1.label_every);
+-
+-		} code_block{
+-
+-		   gen_addi_instruction(program,$1.reg_iteration,REG_0,0);
+-		   gen_bt_instruction(program,$1.label_increase,0);
+-
+-		   assignLabel(program,$1.label_end);
+-		}
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }

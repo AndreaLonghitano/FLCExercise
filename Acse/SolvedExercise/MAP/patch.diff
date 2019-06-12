@@ -1,0 +1,79 @@
+96,97d95
+< 
+< 
+113,114d110
+<    t_map map;
+<    t_reduce reduce;
+131,133d126
+< %token ON
+< %token AS
+< %token INTO
+142,143d134
+< %token <map> MAP
+< %token <reduce> REDUCE
+265,329d255
+< 	    | map_element_statement SEMI
+< 	    | reduce_statement SEMI
+< ;
+< 
+< map_element_statement:MAP IDENTIFIER ON IDENTIFIER AS {
+< 			t_axe_label *label_end;
+< 			if((getVariable(program,$2))->isArray || !(getVariable(program,$4))->isArray) notifyError(AXE_INVALID_TYPE);
+< 
+< 			int reg_counter=getNewRegister(program);
+< 			gen_addi_instruction(program,reg_counter,REG_0,0); // registro per il counter 
+< 
+< 			
+< 			int reg_elem=get_symbol_location(program,$2,0);
+< 
+< 			
+< 			int reg_temp=loadArrayElement(program,$4,create_expression(reg_counter,REGISTER));
+< 			gen_add_instruction(program,reg_elem,REG_0,reg_temp,CG_DIRECT_ALL);
+< 			$1.label_block=newLabel(program);
+< 
+< 			gen_bt_instruction(program,$1.label_block,0);
+< 
+< 			// lo devo salvare anche nel registro con una gen_store
+< 
+< 			t_axe_label *label;
+< 			label=newLabel(program);
+< 			assignLabel(program,label);
+< 			$1.label_exec=label;
+< 
+< 			storeArrayElement(program,$4,create_expression(reg_counter,REGISTER),create_expression(reg_elem,REGISTER));
+< 			gen_addi_instruction(program,reg_counter,reg_counter,1);
+< 			gen_subi_instruction(program,getNewRegister(program),reg_counter,(getVariable(program,$4))->arraySize);
+< 
+< 			label_end=newLabel(program);
+< 			$1.label_end=label_end;
+< 			gen_beq_instruction(program,$1.label_end,0);
+< 
+< 			reg_temp=loadArrayElement(program,$4,create_expression(reg_counter,REGISTER));
+< 			gen_add_instruction(program,reg_elem,REG_0,reg_temp,CG_DIRECT_ALL);
+< 	
+< 			assignLabel(program,$1.label_block);
+< 		   }
+< 			code_block{
+< 				gen_bt_instruction(program,$1.label_exec,0);
+< 				assignLabel(program,$1.label_end);
+< 	
+< 		}
+< ;
+< 
+< 
+< reduce_statement: REDUCE IDENTIFIER {
+< 			$1.reg_vet=get_symbol_location(program,$2,0);
+< 			if((getVariable(program,$2))->isArray)notifyError(AXE_INVALID_TYPE);
+< 		  }
+< 		INTO IDENTIFIER AS {
+< 			$1.reg_element=get_symbol_location(program,$5,0);
+< 			if((getVariable(program,$5))->isArray)notifyError(AXE_INVALID_TYPE);
+< 		}
+< 		LDSQUARE exp RDSQUARE ON IDENTIFIER {
+< 			if(!(getVariable(program,$12))->isArray)notifyError(AXE_INVALID_TYPE);
+< 			int location=loadArrayElement(program,$12,create_expression(0,IMMEDIATE));
+< 			gen_add_instruction(program,$1.reg_vet,REG_0,location,CG_DIRECT_ALL);
+< 			  		/* ????? */
+< 		}
+< 
+< 

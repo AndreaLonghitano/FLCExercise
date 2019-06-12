@@ -1,0 +1,42 @@
+--- Acse.y	2018-12-18 17:46:53.994341000 +0100
++++ Original.y	2017-12-12 12:04:19.000000000 +0100
+@@ -124,7 +124,6 @@
+ %token RETURN
+ %token READ
+ %token WRITE
+-%token WRITEARRAY
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -248,31 +247,8 @@
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
+-	    |writearraystatement SEMI { /* does nothing */ }
+ ;
+ 
+-writearraystatement : WRITEARRAY LPAR IDENTIFIER RPAR {
+-			t_axe_variable *var;
+-			 var=getVariable(program,$3);
+-			 if(!var->isArray)notifyError(AXE_INVALID_TYPE);
+-			else {
+-			   int location = gen_load_immediate(program, 0); /* carico su un registro il valore 0 */
+-			   int reg_dest=getNewRegister(program);
+-			   t_axe_label *label;
+-			   label=assignNewLabel(program);
+-			   int reg=loadArrayElement(program,$3,create_expression(location,REGISTER));   /* Questo registro non mi va bene perche è dinamico allora io lo fisso */
+-			   gen_add_instruction(program,reg_dest,REG_0,reg,CG_DIRECT_ALL);
+-			   gen_write_instruction(program,reg_dest);
+-			   gen_addi_instruction(program,location,location,1);
+-			   gen_subi_instruction(program,getNewRegister(program),location,var->arraySize);
+-			   gen_bne_instruction(program,label,0);
+-			}
+-			free($3);
+-			}
+-			;
+-			
+-	
+-
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }

@@ -1,0 +1,15 @@
+int a,c,somma;
+int v[4];
+v[0]=1;
+v[1]=3;
+v[2]=4;
+v[3]=7;
+
+
+foreach a in v {
+somma=somma+a;
+} every 2 dod {
+write(somma);
+};
+write(c);
+

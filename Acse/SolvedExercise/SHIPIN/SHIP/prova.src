@@ -1,0 +1,8 @@
+int a=8;
+int b=7;
+int c=10,d=0;
+a=b<=>c;
+write(a);
+
+d= a in 7:10;
+write(d); // in questo caso d dovrebbe essere 1
