@@ -1,0 +1,75 @@
+--- Acse.y	2018-12-19 13:50:25.596220000 +0100
++++ Original.y	2017-12-12 12:04:19.000000000 +0100
+@@ -93,12 +93,6 @@
+ extern int yylex(void);
+ extern int yyerror(const char* errmsg);
+ 
+-typedef struct t_eval_unless{
+-   t_axe_label *label_unless;
+-   t_axe_label *label_codeblock;
+-   t_axe_label *label_end;
+-}t_eval_unless;
+-
+ %}
+ %expect 1
+ 
+@@ -114,7 +108,6 @@
+    t_list *list;
+    t_axe_label *label;
+    t_while_statement while_stmt;
+-   t_eval_unless eval_unless;   /* defined in the file struct.h */
+ } 
+ /*=========================================================================
+                                TOKENS 
+@@ -131,7 +124,6 @@
+ %token RETURN
+ %token READ
+ %token WRITE
+-%token UNLESS
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -140,7 +132,6 @@
+ %token <intval> TYPE
+ %token <svalue> IDENTIFIER
+ %token <intval> NUMBER
+-%token <eval_unless> EVAL
+ 
+ %type <expr> exp
+ %type <decl> declaration
+@@ -262,35 +253,6 @@
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
+             | return_statement SEMI      { /* does nothing */ }
+-	    | eval_unless_statement SEMI {/* does nothing */ }
+-;
+-
+-eval_unless_statement: EVAL {
+-			  $1.label_unless=newLabel(program);
+-			  gen_bt_instruction(program,$1.label_unless,0);
+-
+-			  t_axe_label *label_codeblock=newLabel(program);
+-			  $1.label_codeblock=label_codeblock;
+-			  assignLabel(program,$1.label_codeblock);
+-			}
+-			code_block {
+-			  t_axe_label *label_end=newLabel(program);
+-			  $1.label_end=label_end;
+-			  gen_bt_instruction(program,$1.label_end,0);
+-			}
+-			UNLESS {
+-				assignLabel(program,$1.label_unless);
+-				}
+-			exp {
+-			   if ($7.expression_type == IMMEDIATE)
+-                         	gen_load_immediate(program, $7.value);
+-                     	 else
+-                         gen_andb_instruction(program, $7.value,
+-                             $7.value, $7.value, CG_DIRECT_ALL);
+-
+-			 gen_beq_instruction(program,$1.label_codeblock,0); // se è falsa la esegui..
+-			 assignLabel(program,$1.label_end);
+-			}
+ ;
+ 
+ read_write_statement : read_statement  { /* does nothing */ }

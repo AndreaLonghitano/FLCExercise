@@ -1,0 +1,13 @@
+int a,z,k,b;
+a=1000;
+k=1;
+b=10;
+either {
+read(a);
+a = a - 99;
+} or {
+z = 27;
+a = z - b;
+a = a * a;
+} on a > 27 * k;
+write(a);

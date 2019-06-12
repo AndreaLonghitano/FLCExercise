@@ -1,0 +1,83 @@
+--- Acse.y	2018-12-21 09:37:30.798700000 +0100
++++ Original.y	2017-12-12 12:04:19.000000000 +0100
+@@ -124,7 +124,6 @@
+ %token RETURN
+ %token READ
+ %token WRITE
+-%token VETTOR
+ 
+ %token <label> DO
+ %token <while_stmt> WHILE
+@@ -248,72 +247,8 @@
+             | control_statement          { /* does nothing */ }
+             | read_write_statement SEMI  { /* does nothing */ }
+             | SEMI            { gen_nop_instruction(program); }
+-	    | assign_vector SEMI
+ ;
+ 
+-assign_vector: IDENTIFIER VETTOR IDENTIFIER{
+-		if(!(getVariable(program,$1))->isArray || !(getVariable(program,$3))->isArray) notifyError(AXE_INVALID_TYPE);
+-		// altriemnti devo decidere cosa fare 
+-		int reg_1=getNewRegister(program);
+-		int reg_2=getNewRegister(program);
+-		int reg_counter=getNewRegister(program);
+-		int elem;
+-		gen_addi_instruction(program,reg_counter,REG_0,0);
+-		
+-		t_axe_label *label_eq=newLabel(program);
+-		t_axe_label *label_bmi=newLabel(program);
+-		t_axe_label *label_zero=newLabel(program);
+-		t_axe_label *label_bpl=newLabel(program);
+-		t_axe_label *label_end=newLabel(program);
+-
+-		gen_addi_instruction(program,reg_1,REG_0,(getVariable(program,$1))->arraySize);
+-		gen_addi_instruction(program,reg_2,REG_0,(getVariable(program,$3))->arraySize);
+-		int tmp=getNewRegister(program);
+-		gen_sub_instruction(program,tmp,reg_1,reg_2,CG_DIRECT_ALL);
+-		
+-		gen_beq_instruction(program,label_eq,0);
+-		gen_bmi_instruction(program,label_bmi,0); // se è negativo vado altrove.. Quindi se v1>v2
+-	
+-		// se sono qui vuol dire che la differenza è positiva.Quindi v1>v2
+-		assignLabel(program,label_bpl);
+-		gen_sub_instruction(program,tmp,reg_2,reg_counter,CG_DIRECT_ALL);
+-		gen_beq_instruction(program,label_zero,0);
+-		elem=loadArrayElement(program,$3,create_expression(reg_counter,REGISTER));
+-		storeArrayElement(program,$1,create_expression(reg_counter,REGISTER),create_expression(elem,REGISTER));
+-		gen_addi_instruction(program,reg_counter,reg_counter,1);
+-		gen_bt_instruction(program,label_bpl,0);
+-		
+-		// here we copy zero 
+-		assignLabel(program,label_zero);
+-		gen_sub_instruction(program,tmp,reg_1,reg_counter,CG_DIRECT_ALL);
+-		gen_beq_instruction(program,label_end,0);
+-		storeArrayElement(program,$1,create_expression(reg_counter,REGISTER),create_expression(0,IMMEDIATE));
+-		gen_addi_instruction(program,reg_counter,reg_counter,1);
+-		gen_bt_instruction(program,label_zero,0);
+-
+-		// v1=v2
+-		assignLabel(program,label_eq);
+-		gen_sub_instruction(program,reg_2,reg_1,reg_counter,CG_DIRECT_ALL); // riciclo il registro r2 tanto sono gli stessi
+-		gen_beq_instruction(program,label_end,0);
+-		 elem=loadArrayElement(program,$3,create_expression(reg_counter,REGISTER));
+-		storeArrayElement(program,$1,create_expression(reg_counter,REGISTER),create_expression(elem,REGISTER));
+-		gen_addi_instruction(program,reg_counter,reg_counter,1);
+-		gen_bt_instruction(program,label_eq,0);
+-
+-		// il caso in vui v1<v2
+-		assignLabel(program,label_bmi);
+-		gen_sub_instruction(program,tmp,reg_1,reg_counter,CG_DIRECT_ALL);
+-		gen_beq_instruction(program,label_end,0);
+-		elem=loadArrayElement(program,$3,create_expression(reg_counter,REGISTER));
+-		storeArrayElement(program,$1,create_expression(reg_counter,REGISTER),create_expression(elem,REGISTER));
+-		gen_addi_instruction(program,reg_counter,reg_counter,1);
+-		gen_bt_instruction(program,label_bmi,0);
+-		
+-		assignLabel(program,label_end);
+-		free($1);
+-		free($3);
+-	}
+-
+ control_statement : if_statement         { /* does nothing */ }
+             | while_statement            { /* does nothing */ }
+             | do_while_statement SEMI    { /* does nothing */ }
