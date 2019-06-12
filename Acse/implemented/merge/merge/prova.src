@@ -1,3 +1,0 @@
-int a=1,c=2,b,d;
-d=merge a,c,c>a;
-write(d);

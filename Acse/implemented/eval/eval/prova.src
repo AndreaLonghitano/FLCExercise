@@ -1,8 +1,0 @@
-int a=7;
-int b;
-
-eval {
- b=10;
-}unless a==7;
-
-write(b);
